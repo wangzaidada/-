@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Stream</title>
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            background: black; /* 设置背景为黑色 */
+        }
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* 保持比例填满整个屏幕 */
+        }
+        button {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 10px;
+            background: white;
+            border: none;
+            cursor: pointer;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <button id="toggleProtocol">切换到 IPv6</button>
+    <img id="cameraImage" />
+    <script>
+        const image = document.getElementById('cameraImage');
+        const toggleButton = document.getElementById('toggleProtocol');
+
+        let useIPv6 = false; // 默认使用 IPv4
+        let socket;
+
+        function createWebSocket() {
+            const serverAddress = useIPv6 ? 'ws://moonlit.asia:8000' : 'ws://192.168.137.1:8000';
+            socket = new WebSocket(serverAddress);
+            socket.binaryType = 'arraybuffer';
+
+            socket.onmessage = function(event) {
+                const arrayBuffer = event.data;
+                const blob = new Blob([arrayBuffer], { type: 'image/jpeg' });
+                const url = URL.createObjectURL(blob);
+                image.src = url; // 将图像源设置为 Blob URL
+            };
+
+            socket.onclose = function() {
+                console.log('WebSocket closed');
+            };
+        }
+
+        // 在 DOMContentLoaded 时创建 WebSocket 并绑定按钮事件
+        document.addEventListener('DOMContentLoaded', function() {
+            createWebSocket();
+
+            toggleButton.onclick = function() {
+                useIPv6 = !useIPv6; // 切换协议类型
+                socket.close(); // 关闭当前 WebSocket 连接
+                createWebSocket(); // 创建新的 WebSocket 连接
+
+                // 更新按钮文本
+                if (useIPv6) {
+                    toggleButton.textContent = '切换到 IPv4';
+                } else {
+                    toggleButton.textContent = '切换到 IPv6';
+                }
+            };
+
+            // 自动全屏逻辑
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen();
+            } else if (document.documentElement.mozRequestFullScreen) { // Firefox
+                document.documentElement.mozRequestFullScreen();
+            } else if (document.documentElement.webkitRequestFullscreen) { // Chrome, Safari 和 Opera
+                document.documentElement.webkitRequestFullscreen();
+            } else if (document.documentElement.msRequestFullscreen) { // IE/Edge
+                document.documentElement.msRequestFullscreen();
+            }
+        });
+    </script>
+</body>
+</html>
